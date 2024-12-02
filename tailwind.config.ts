@@ -12,6 +12,11 @@ export default {
         background: "var(--background)",
         foreground: "var(--foreground)",
       },
+      fontFamily: {
+        sukhumvit: ["var(--font-sukhumvit-regular)"],
+        sukhumvitBold: ["var(--font-sukhumvit-bold)"],
+        sukhumvitLight: ["var(--font-sukhumvit-light)"],
+      },
     },
   },
   plugins: [],
