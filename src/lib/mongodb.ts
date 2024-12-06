@@ -22,23 +22,47 @@ if (!global.mongoose) {
 }
 
 export const connectDB = async () => {
-  if (cached.conn) {
-    console.log('Using existing MongoDB connection');
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    console.log('Creating new MongoDB connection...');
-    const promise = mongoose.connect(MONGODB_URI, { bufferCommands: false });
-    cached.promise = promise;
-  }
-
   try {
+    if (cached.conn) {
+      console.log('Using existing MongoDB connection');
+      return cached.conn;
+    }
+
+    if (!cached.promise) {
+      const opts = {
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+        socketTimeoutMS: 45000, // Close sockets after 45s
+        family: 4 // Use IPv4, skip trying IPv6
+      };
+
+      console.log('Creating new MongoDB connection...');
+      cached.promise = mongoose.connect(MONGODB_URI, opts);
+    }
+
     cached.conn = await cached.promise;
     console.log('Successfully connected to MongoDB');
     return cached.conn;
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
+    console.error('MongoDB connection error:', error);
+    cached.promise = null;
     throw error;
   }
 };
+
+// Handle connection errors
+mongoose.connection.on('error', (error) => {
+  console.error('MongoDB connection error:', error);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('MongoDB disconnected. Attempting to reconnect...');
+  cached.conn = null;
+  cached.promise = null;
+});
+
+// Gracefully close the connection when the app terminates
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  process.exit(0);
+});
